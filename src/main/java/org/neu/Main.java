@@ -55,6 +55,27 @@ public class Main {
      * @param links
      * @param html
      */
+    private static void grepHyperLinksRecursive(List<String> links, String html) {
+        if (html.contains("https") || html.contains("http")) {
+            int start = html.indexOf("http");
+            int end = html.indexOf("\"", start + 1);
+
+            String url = html.substring(start, end);
+            links.add(url);
+
+            html = html.replace(url, "");
+
+            grepHyperLinksRecursive(links, html);
+        }
+
+    }
+
+    /**
+     * Iteratively extract any links present inside a html string
+     *
+     * @param links
+     * @param html
+     */
     private static void grepHyperLinks(List<String> links, String html) {
         if (html.contains("https") || html.contains("http")) {
             int start = html.indexOf("http");
@@ -69,6 +90,7 @@ public class Main {
         }
 
     }
+
 
     private static String webpage = "https://athk.dev";
 }
