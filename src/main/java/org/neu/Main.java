@@ -7,7 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
+    private static String webpage = "https://athk.dev";
     public static void main(String[] args) throws MalformedURLException, IOException {
-        Crawler.run();
+        Crawler.run(webpage);
     }
 }

@@ -5,11 +5,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Crawler {
-    public static void run() throws MalformedURLException, IOException {
+
+    public static void run(String webpage) throws IOException {
+        bfsTraversal(webpage);
+    }
+
+    private static List<String> processURL(String webpage) throws MalformedURLException, IOException {
         List<String> lines = new ArrayList<>();
         List<String> hyperlinks = new ArrayList<>();
 
@@ -44,7 +48,7 @@ public class Crawler {
         catch (IOException e) {
             System.out.println(e.getMessage());
         }
-
+        return hyperlinks;
     }
 
     /**
@@ -76,19 +80,43 @@ public class Crawler {
      */
     public static void grepHyperLinks(List<String> links, String html) {
         if (html.contains("https") || html.contains("http")) {
-            int start = html.indexOf("http");
-            int end = html.indexOf("\"", start + 1);
+            try{
+                int start = html.indexOf("http");
+                int end = html.indexOf("\"", start + 1);
 
-            String url = html.substring(start, end);
-            links.add(url);
+                String url = html.substring(start, end);
+                links.add(url);
 
-            html = html.replace(url, "");
+                html = html.replace(url, "");
 
-            grepHyperLinks(links, html);
+                grepHyperLinks(links, html);
+            }
+            catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+
         }
+    }
 
+    private static void bfsTraversal(String webpage) throws IOException {
+        Queue<String> queue = new LinkedList<>();
+
+        Set<String> visited  = new HashSet<>();
+
+        queue.add(webpage);
+
+        while(!queue.isEmpty()) {
+            String url = queue.poll();
+            System.out.println(url);
+            for(String _link: processURL(url)){
+                if(!visited.contains(_link)) {
+                    visited.add(_link);
+                    queue.add(_link);
+                }
+            }
+
+        }
     }
 
 
-    private static String webpage = "https://athk.dev";
 }
