@@ -9,12 +9,13 @@ import java.util.*;
 
 public class Crawler {
 
-    public static void run(String webpage) throws IOException {
-//        bfsTraversal(webpage);
-        Neo4jTransactionHandler tx = new Neo4jTransactionHandler();
-        tx.initialize();
-        tx.close();
-        System.out.println(tx.getAllInboundNodes(webpage)+" "+tx.getAllOutboundNodes(webpage));
+    private Neo4jTransactionHandler db;
+
+    public void run(String webpage) throws IOException {
+        this.db = new Neo4jTransactionHandler();
+        this.db.initialize();
+        bfsTraversal(webpage);
+        this.db.close();
     }
 
     private static List<String> processURL(String webpage) throws MalformedURLException, IOException {
@@ -102,7 +103,7 @@ public class Crawler {
         }
     }
 
-    private static void bfsTraversal(String webpage) throws IOException {
+    private void bfsTraversal(String webpage) throws IOException {
         //create a queue for bfs
         Queue<String> queue = new LinkedList<>();
         //Initialize the visited set
@@ -112,17 +113,20 @@ public class Crawler {
         //mark the root URL - visited
         visited.add(webpage);
         //Iterate over the queue
+        int cnt=0;
         while(!queue.isEmpty()) {
+            if(cnt==3) break;
             String url = queue.poll();
             List<String> childLinks = processURL(url);
             for(String _link: childLinks){
                 if(!visited.contains(_link)) {
                     System.out.println(url);
                     visited.add(_link);
+                    this.db.mergeNodeWithChildURL(url, _link);
                     queue.add(_link);
                 }
             }
-
+            cnt+=1;
         }
     }
 

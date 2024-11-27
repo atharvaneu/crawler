@@ -28,10 +28,17 @@ public class Neo4jTransactionHandler {
     public void initialize(){
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
-            driver.verifyConnectivity();
-            System.out.println("Connection established.");
+            this.driver.verifyConnectivity();
+            System.out.println("Connection established");
         } catch (Exception e) {
             System.out.println("Failed to connect to the database: " + e.getMessage());
+        }
+        try{
+            this.session = this.driver.session(SessionConfig.builder().withDatabase("neo4j").build());
+        }
+        catch(Exception e){
+            System.out.println("Failed to initiate session: " + e.getMessage());
+            this.close();
         }
     }
 
@@ -50,5 +57,21 @@ public class Neo4jTransactionHandler {
         return null;
     }
 
+    public void mergeNodeWithChildURL(String url, String dependent_url){
+        try{
+            this.session.executeWrite(tx->{
+                tx.run(
+                        "MERGE (u:url {address: $url}) " +
+                                "MERGE (u_child:url {address: $dependent_url}) " + // Ensure the dependent node is defined separately
+                                "MERGE (u)-[:contains]->(u_child)",              // Create the relationship
+                        Map.of("url", url, "dependent_url", dependent_url) // Pass both parameters
+                ).consume();
+                return null;
+            });
+        }
+        catch(Exception e){
+            System.out.println("Failed to insert node: " + e.getMessage());
+        }
+    }
 
 }
