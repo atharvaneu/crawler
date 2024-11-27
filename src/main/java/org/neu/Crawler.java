@@ -10,7 +10,11 @@ import java.util.*;
 public class Crawler {
 
     public static void run(String webpage) throws IOException {
-        bfsTraversal(webpage);
+//        bfsTraversal(webpage);
+        Neo4jTransactionHandler tx = new Neo4jTransactionHandler();
+        tx.initialize();
+        tx.close();
+        System.out.println(tx.getAllInboundNodes(webpage)+" "+tx.getAllOutboundNodes(webpage));
     }
 
     private static List<String> processURL(String webpage) throws MalformedURLException, IOException {
@@ -99,17 +103,21 @@ public class Crawler {
     }
 
     private static void bfsTraversal(String webpage) throws IOException {
+        //create a queue for bfs
         Queue<String> queue = new LinkedList<>();
-
+        //Initialize the visited set
         Set<String> visited  = new HashSet<>();
-
+        //push the root URL vertex into the queue
         queue.add(webpage);
-
+        //mark the root URL - visited
+        visited.add(webpage);
+        //Iterate over the queue
         while(!queue.isEmpty()) {
             String url = queue.poll();
-            System.out.println(url);
-            for(String _link: processURL(url)){
+            List<String> childLinks = processURL(url);
+            for(String _link: childLinks){
                 if(!visited.contains(_link)) {
+                    System.out.println(url);
                     visited.add(_link);
                     queue.add(_link);
                 }
