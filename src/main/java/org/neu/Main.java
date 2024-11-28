@@ -16,10 +16,13 @@ public class Main {
 
         webcrawler.init();
 
-        webcrawler.run(webpage);
+        for (String _page: pages) {
+            webcrawler.run(_page);
+        }
 
         webcrawler.close();
     }
 
-    private static String webpage = "https://athk.dev";
+
+    private static String[] pages = {"https://athk.dev", "https://www.wikipedia.org/"};
 }
