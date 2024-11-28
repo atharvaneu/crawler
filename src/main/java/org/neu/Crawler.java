@@ -47,12 +47,14 @@ public class Crawler {
         while(!queue.isEmpty()) {
             if(cnt==3) break;
             String url = queue.poll();
-            System.out.println(">>>>>" + url);
+
             List<String> childLinks = processURL(url);
             for(String _link: childLinks){
                 if(visited.contains(_link)) continue;
-
                 visited.add(_link);
+
+                System.out.println(_link);
+
                 this.db.mergeNodeWithChildURL(url, _link);
                 queue.add(_link);
             }
@@ -99,13 +101,30 @@ public class Crawler {
         return hyperlinks;
     }
 
+    public static void grepHyperLinks(List<String> links, String html) {
+        int start = 0;
+
+        while (start != -1 && start < html.length()) {
+            start = html.indexOf("http", start);
+            if (start != -1) {
+                int end = html.indexOf("\"", start + 1);
+                if (end == -1) {  // If no closing quote is found, end the search
+                    break;
+                }
+                String url = html.substring(start, end);
+                links.add(url);
+                start = end + 1;  // Move start to just past the last found URL to continue search
+            }
+        }
+    }
+
     /**
      * Iteratively extract any links present inside a html string
      *
      * @param links
      * @param html
      */
-    public void grepHyperLinks(List<String> links, String html) {
+    public void grepHyperLinkss(List<String> links, String html) {
         if (html.contains("https") || html.contains("http")) {
             try{
                 int start = html.indexOf("http");
@@ -127,26 +146,6 @@ public class Crawler {
         }
     }
 
-    /**
-     * Recursively extract any links present inside a html string
-     *
-     * @param links
-     * @param html
-     */
-    private static void grepHyperLinksRecursive(List<String> links, String html) {
-        if (html.contains("https") || html.contains("http")) {
-            int start = html.indexOf("http");
-            int end = html.indexOf("\"", start + 1);
-
-            String url = html.substring(start, end);
-            links.add(url);
-
-            html = html.replace(url, "");
-
-            grepHyperLinksRecursive(links, html);
-        }
-
-    }
 
 
     private static Crawler instance;
