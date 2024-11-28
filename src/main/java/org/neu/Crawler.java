@@ -29,8 +29,35 @@ public class Crawler {
         this.db.close();
     }
 
-    public void run(String webpage) throws IOException {
-        bfsTraversal(webpage);
+    public void run(String url) throws IOException {
+        bfsTraversal(url);
+    }
+
+    private void bfsTraversal(String webpage) throws IOException {
+        //create a queue for bfs
+        Queue<String> queue = new LinkedList<>();
+//        //Initialize the visited set
+//        Set<String> visited  = new HashSet<>();
+        //push the root URL vertex into the queue
+        queue.add(webpage);
+        //mark the root URL - visited
+        visited.add(webpage);
+        //Iterate over the queue
+        int cnt=0;
+        while(!queue.isEmpty()) {
+            if(cnt==3) break;
+            String url = queue.poll();
+            System.out.println(">>>>>" + url);
+            List<String> childLinks = processURL(url);
+            for(String _link: childLinks){
+                if(visited.contains(_link)) continue;
+
+                visited.add(_link);
+                this.db.mergeNodeWithChildURL(url, _link);
+                queue.add(_link);
+            }
+            cnt+=1;
+        }
     }
 
     private List<String> processURL(String webpage) throws MalformedURLException, IOException {
@@ -54,9 +81,9 @@ public class Crawler {
                 grepHyperLinks(hyperlinks, _line);
             }
 
-            for(String _link: hyperlinks) {
-                System.out.println(_link);
-            }
+//            for(String _link: hyperlinks) {
+//                System.out.println(_link);
+//            }
 
 
             reader.close();
@@ -68,28 +95,8 @@ public class Crawler {
         catch (IOException e) {
             System.out.println(e.getMessage());
         }
+
         return hyperlinks;
-    }
-
-    /**
-     * Recursively extract any links present inside a html string
-     *
-     * @param links
-     * @param html
-     */
-    private static void grepHyperLinksRecursive(List<String> links, String html) {
-        if (html.contains("https") || html.contains("http")) {
-            int start = html.indexOf("http");
-            int end = html.indexOf("\"", start + 1);
-
-            String url = html.substring(start, end);
-            links.add(url);
-
-            html = html.replace(url, "");
-
-            grepHyperLinksRecursive(links, html);
-        }
-
     }
 
     /**
@@ -120,32 +127,27 @@ public class Crawler {
         }
     }
 
-    private void bfsTraversal(String webpage) throws IOException {
-        //create a queue for bfs
-        Queue<String> queue = new LinkedList<>();
-//        //Initialize the visited set
-//        Set<String> visited  = new HashSet<>();
-        //push the root URL vertex into the queue
-        queue.add(webpage);
-        //mark the root URL - visited
-        visited.add(webpage);
-        //Iterate over the queue
-        int cnt=0;
-        while(!queue.isEmpty()) {
-            if(cnt==3) break;
-            String url = queue.poll();
-            List<String> childLinks = processURL(url);
-            for(String _link: childLinks){
-                if(!visited.contains(_link)) {
-                    System.out.println(url);
-                    visited.add(_link);
-                    this.db.mergeNodeWithChildURL(url, _link);
-                    queue.add(_link);
-                }
-            }
-            cnt+=1;
+    /**
+     * Recursively extract any links present inside a html string
+     *
+     * @param links
+     * @param html
+     */
+    private static void grepHyperLinksRecursive(List<String> links, String html) {
+        if (html.contains("https") || html.contains("http")) {
+            int start = html.indexOf("http");
+            int end = html.indexOf("\"", start + 1);
+
+            String url = html.substring(start, end);
+            links.add(url);
+
+            html = html.replace(url, "");
+
+            grepHyperLinksRecursive(links, html);
         }
+
     }
+
 
     private static Crawler instance;
     private Set<String> visited;
