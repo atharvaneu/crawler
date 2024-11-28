@@ -9,16 +9,31 @@ import java.util.*;
 
 public class Crawler {
 
-    private Neo4jTransactionHandler db;
+    private Crawler() {}
 
-    public void run(String webpage) throws IOException {
+    public static Crawler getInstance() {
+        if (instance == null) {
+            instance = new Crawler();
+        }
+
+        return instance;
+    }
+
+    public void init() {
         this.db = new Neo4jTransactionHandler();
         this.db.initialize();
-        bfsTraversal(webpage);
+        this.visited = new HashSet<>();
+    }
+
+    public void close() {
         this.db.close();
     }
 
-    private static List<String> processURL(String webpage) throws MalformedURLException, IOException {
+    public void run(String webpage) throws IOException {
+        bfsTraversal(webpage);
+    }
+
+    private List<String> processURL(String webpage) throws MalformedURLException, IOException {
         List<String> lines = new ArrayList<>();
         List<String> hyperlinks = new ArrayList<>();
 
@@ -83,14 +98,16 @@ public class Crawler {
      * @param links
      * @param html
      */
-    public static void grepHyperLinks(List<String> links, String html) {
+    public void grepHyperLinks(List<String> links, String html) {
         if (html.contains("https") || html.contains("http")) {
             try{
                 int start = html.indexOf("http");
                 int end = html.indexOf("\"", start + 1);
 
                 String url = html.substring(start, end);
-                links.add(url);
+                if (!visited.contains(url)) {
+                    links.add(url);
+                }
 
                 html = html.replace(url, "");
 
@@ -106,8 +123,8 @@ public class Crawler {
     private void bfsTraversal(String webpage) throws IOException {
         //create a queue for bfs
         Queue<String> queue = new LinkedList<>();
-        //Initialize the visited set
-        Set<String> visited  = new HashSet<>();
+//        //Initialize the visited set
+//        Set<String> visited  = new HashSet<>();
         //push the root URL vertex into the queue
         queue.add(webpage);
         //mark the root URL - visited
@@ -130,5 +147,7 @@ public class Crawler {
         }
     }
 
-
+    private static Crawler instance;
+    private Set<String> visited;
+    private Neo4jTransactionHandler db;
 }
