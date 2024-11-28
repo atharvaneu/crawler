@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.*;
 
 public class Crawler {
 
@@ -22,15 +23,51 @@ public class Crawler {
     public void init() {
         this.db = new Neo4jTransactionHandler();
         this.db.initialize();
-        this.visited = new HashSet<>();
+        this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//        this.visited = new HashSet<>();
+        this.visited = ConcurrentHashMap.newKeySet(); // thread safe hashSet
     }
 
     public void close() {
         this.db.close();
     }
 
-    public void run(String url) throws IOException {
+    public void run(String url) throws IOException, InterruptedException, ExecutionException {
         bfsTraversal(url);
+    }
+
+    private void bfsTraversall(String rootUrl) throws InterruptedException, ExecutionException {
+        Queue<String> queue = new LinkedList<>();
+        queue.add(rootUrl);
+        visited.add(rootUrl);
+
+        int depth = 0;
+        while (!queue.isEmpty()) {
+            if (depth >= 3) break;
+
+            List<CompletableFuture<Void>> futures = new ArrayList<>();
+            String url = queue.poll();
+
+            CompletableFuture<List<String>> future = processURLAsync(url);
+            future.thenAccept(childLinks -> {
+                for (String link : childLinks) {
+                    if (!visited.contains(link)) {
+                        visited.add(link);
+                        System.out.println(url + "\t>>>\t" + link);
+                        db.mergeNodeWithChildURL(url, link);
+                        queue.add(link);
+                    }
+                }
+            }).exceptionally(ex -> {
+                System.out.println("Error processing URL " + url + ": " + ex.getMessage());
+                return null;
+            });
+
+            depth += 1;
+
+            futures.add(future.thenRun(() -> {}));
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
+        }
     }
 
     private void bfsTraversal(String webpage) throws IOException {
@@ -53,13 +90,31 @@ public class Crawler {
                 if(visited.contains(_link)) continue;
                 visited.add(_link);
 
-                System.out.println(_link);
+                System.out.println(url + "\t>>>\t" + _link);
 
                 this.db.mergeNodeWithChildURL(url, _link);
                 queue.add(_link);
             }
             cnt+=1;
         }
+    }
+
+    private CompletableFuture<List<String>> processURLAsync(String webpage) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<String> hyperlinks = new ArrayList<>();
+            try {
+                URL url = new URL(webpage);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    grepHyperLinks(hyperlinks, line);
+                }
+                reader.close();
+            } catch (IOException e) {
+                System.out.println("Failed to process " + webpage + ": " + e.getMessage());
+            }
+            return hyperlinks;
+        }, exec);
     }
 
     private List<String> processURL(String webpage) throws MalformedURLException, IOException {
@@ -151,4 +206,5 @@ public class Crawler {
     private static Crawler instance;
     private Set<String> visited;
     private Neo4jTransactionHandler db;
+    private Executor exec;
 }
