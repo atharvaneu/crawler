@@ -80,21 +80,25 @@ public class Crawler {
 
                                     childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                             .toCompletableFuture()
-                                            .thenAccept(v -> System.out.println(currentUrl + " >>> " + childLink));
+                                            .thenAccept(v -> {
+//                                                System.out.println(currentUrl + " >>> " + childLink);
+                                            });
 
                                 } else {
                                     String existingParent = childToParent.get(childLink);
                                     if (existingParent != null && !existingParent.equals(currentUrl) && !wouldCreateCycle(currentUrl, childLink)) {
                                         childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                                 .toCompletableFuture()
-                                                .thenAccept(v -> System.out.println("Additional edge: " + currentUrl + " >>> " + childLink));
+                                                .thenAccept(v -> {
+//                                                    System.out.println("Additional edge: " + currentUrl + " >>> " + childLink);
+                                                });
                                     } else {
                                         childFuture = CompletableFuture.completedFuture(null);
                                     }
                                 }
 
                                 childFutures.add(childFuture.exceptionally(ex -> {
-                                    System.err.println("Error processing link " + childLink + ": " + ex.getMessage());
+//                                    System.err.println("Error processing link " + childLink + ": " + ex.getMessage());
                                     return null;
                                 }));
                             }
@@ -121,7 +125,7 @@ public class Crawler {
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Failed to process " + webpage + ": " + e.getMessage());
+//                System.err.println("Failed to process " + webpage + ": " + e.getMessage());
             }
             return filterValidUrls(hyperlinks);
         }, exec);
@@ -165,7 +169,7 @@ public class Crawler {
                     }
                 }
             } catch (IOException e) {
-                System.err.println("Failed to process " + webpage + ": " + e.getMessage());
+//                System.err.println("Failed to process " + webpage + ": " + e.getMessage());
             }
             return hyperlinks;
         }, exec);
@@ -191,4 +195,5 @@ public class Crawler {
             }
         }
     }
+
 }

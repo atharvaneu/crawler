@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class Main {
-    public static void main(String[] args) throws MalformedURLException, IOException, ExecutionException, InterruptedException {
+    public static void main(String[] args) throws  ExecutionException, InterruptedException {
         Crawler webcrawler = Crawler.getInstance();
         /**
          * Making the webcrawler instantiation into a singleton, with init and close methods - this is because it would help in calling webcrawler.run(webpage)
