@@ -179,12 +179,15 @@ public class Crawler {
             start = html.indexOf("http", start);
             if (start != -1) {
                 int end = html.indexOf("\"", start + 1);
-                if (end == -1) {
+                if (end == -1) {  // If no closing quote is found, end the search
                     break;
                 }
                 String url = html.substring(start, end);
-                links.add(url);
-                start = end + 1;
+                if (url.endsWith("/")) {
+                    url = url.substring(0, url.length() - 1);
+                }
+                if(url.length()<=1000) links.add(url);
+                start = end + 1;  // Move start to just past the last found URL to continue search
             }
         }
     }
