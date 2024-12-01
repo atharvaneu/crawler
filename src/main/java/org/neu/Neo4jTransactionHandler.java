@@ -7,6 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.neo4j.driver.*;
 import org.neo4j.driver.async.*;
 import org.neo4j.driver.Record;
@@ -15,12 +17,6 @@ import org.neo4j.driver.exceptions.NoSuchRecordException;
 import org.neo4j.driver.summary.ResultSummary;
 
 public class Neo4jTransactionHandler {
-
-    private static String hostname;
-    private static String username;
-    private static String password;
-    private Driver driver;
-    private AsyncSession session;
 
     public Neo4jTransactionHandler() {
         ConfigReader configReader = new ConfigReader();
@@ -40,24 +36,27 @@ public class Neo4jTransactionHandler {
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
             this.driver.verifyConnectivity();
+            logger.info("Connection to Neo4J established");
             System.out.println("Connection established");
             createConstraints();
         } catch (Exception e) {
-            System.out.println("Failed to connect to the database: " + e.getMessage());
+            logger.fatal("Failed to connect to the database: " + e.getMessage());
+            System.exit(1);
         }
         try{
             this.session = this.driver.session(AsyncSession.class, SessionConfig.builder().withDatabase("neo4j").build());
         }
         catch(Exception e){
-            System.out.println("Failed to initiate session: " + e.getMessage());
+            logger.fatal("Failed to initiate session: " + e.getMessage());
             this.close();
+            System.exit(1);
         }
     }
 
     public void close(){
         if (driver != null) {
             driver.close();
-            System.out.println("Driver closed.");
+            logger.info("Neo4J connection closed");
         }
     }
 
@@ -86,5 +85,13 @@ public class Neo4jTransactionHandler {
             return null;
         }).toCompletableFuture();
     }
+
+    private static String hostname;
+    private static String username;
+    private static String password;
+    private Driver driver;
+    private AsyncSession session;
+    private static final Logger logger = LogManager.getLogger(Neo4jTransactionHandler.class);
+
 
 }

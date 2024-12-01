@@ -1,5 +1,8 @@
 package org.neu;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -9,6 +12,8 @@ import java.util.concurrent.ExecutionException;
 
 public class Main {
     public static void main(String[] args) throws  ExecutionException, InterruptedException {
+
+
         Crawler webcrawler = Crawler.getInstance();
         /**
          * Making the webcrawler instantiation into a singleton, with init and close methods - this is because it would help in calling webcrawler.run(webpage)

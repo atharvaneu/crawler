@@ -1,5 +1,8 @@
 package org.neu;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,17 +13,13 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class Crawler {
-    private static Crawler instance;
-    private Set<String> visited;
-    private Map<String, String> childToParent;
-    private Neo4jTransactionHandler db;
-    private ExecutorService exec;
 
     private Crawler() {
     }
 
     public static Crawler getInstance() {
         if (instance == null) {
+            logger.info("Creating Crawler singleton instance");
             instance = new Crawler();
         }
         return instance;
@@ -32,6 +31,8 @@ public class Crawler {
         this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         this.visited = ConcurrentHashMap.newKeySet();
         this.childToParent = new ConcurrentHashMap<>();
+
+        logger.info("Crawler successfully initialized and is ready to begin crawling");
     }
 
     public void close() {
@@ -44,9 +45,13 @@ public class Crawler {
         } catch (InterruptedException e) {
             this.exec.shutdownNow();
         }
+
+        logger.info("Crawler terminated");
     }
 
     public void run(String url) throws InterruptedException, ExecutionException {
+        logger.info("Starting crawling with base URL: '" + url + "'");
+
         bfsTraversal(url);
     }
 
@@ -73,6 +78,8 @@ public class Crawler {
                             List<CompletableFuture<Void>> childFutures = new ArrayList<>();
 
                             for (String childLink : childLinks) {
+                                logger.info("Current link being processed: " + childLink);
+
                                 CompletableFuture<Void> childFuture;
                                 if (visited.add(childLink)) {
                                     queue.add(childLink);
@@ -195,5 +202,12 @@ public class Crawler {
             }
         }
     }
+
+    private static Crawler instance;
+    private Set<String> visited;
+    private Map<String, String> childToParent;
+    private Neo4jTransactionHandler db;
+    private ExecutorService exec;
+    private static final Logger logger = LogManager.getLogger(Crawler.class);
 
 }
