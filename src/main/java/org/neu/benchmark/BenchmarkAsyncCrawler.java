@@ -1,5 +1,7 @@
-package org.neu;
+package org.neu.benchmark;
 
+
+import org.neu.Crawler;
 
 public class BenchmarkAsyncCrawler {
 

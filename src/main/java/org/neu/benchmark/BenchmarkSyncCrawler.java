@@ -1,4 +1,6 @@
-package org.neu;
+package org.neu.benchmark;
+
+import org.neu.SyncCrawler;
 
 import java.io.*;
 import java.net.MalformedURLException;

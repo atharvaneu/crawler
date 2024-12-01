@@ -1,8 +1,7 @@
-package org.neu;
+package org.neu.neo4j;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
 
 public  class ConfigReader {

@@ -7,7 +7,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,7 +23,7 @@ public class SyncCrawler {
     }
 
     public void init() {
-        this.db = new SyncNeo4jTransactionHandler();
+        this.db = new Crawler.SyncNeo4jTransactionHandler();
         this.db.initialize();
         this.visited = new HashSet<>();
     }
@@ -132,5 +131,5 @@ public class SyncCrawler {
 
     private static SyncCrawler instance;
     private Set<String> visited;
-    private SyncNeo4jTransactionHandler db;
+    private Crawler.SyncNeo4jTransactionHandler db;
 }
