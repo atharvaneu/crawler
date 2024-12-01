@@ -53,13 +53,13 @@ public class Crawler {
         logger.info("Crawler terminated");
     }
 
-    public void run(String url) throws InterruptedException, ExecutionException {
+    public void run(String url) throws InterruptedException, ExecutionException, MalformedURLException {
         logger.info("Starting crawling with base URL: '" + url + "'");
 
         bfsTraversal(url);
     }
 
-    private void bfsTraversal(String rootUrl) throws InterruptedException, ExecutionException {
+    private void bfsTraversal(String rootUrl) throws InterruptedException, ExecutionException, MalformedURLException {
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
         queue.add(rootUrl);
         visited.add(rootUrl);
@@ -124,11 +124,11 @@ public class Crawler {
         }
     }
 
-    private CompletableFuture<List<String>> processURLAsync(String webpage) {
+    public CompletableFuture<List<String>> processURLAsync(String webpage) throws MalformedURLException {
+        URL url = new URL(webpage);
         return CompletableFuture.supplyAsync(() -> {
             List<String> hyperlinks = new ArrayList<>();
             try {
-                URL url = new URL(webpage);
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
@@ -156,7 +156,7 @@ public class Crawler {
                 .collect(Collectors.toList());
     }
 
-    private boolean wouldCreateCycle(String sourceUrl, String targetUrl) {
+    public boolean wouldCreateCycle(String sourceUrl, String targetUrl) {
 
         String current = sourceUrl;
         while (current != null) {
@@ -166,24 +166,6 @@ public class Crawler {
             current = childToParent.get(current);
         }
         return false;
-    }
-
-    private CompletableFuture<List<String>> processURLAsyncc(String webpage) {
-        return CompletableFuture.supplyAsync(() -> {
-            List<String> hyperlinks = new ArrayList<>();
-            try {
-                URL url = new URL(webpage);
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        grepHyperLinks(hyperlinks, line);
-                    }
-                }
-            } catch (IOException e) {
-//                System.err.println("Failed to process " + webpage + ": " + e.getMessage());
-            }
-            return hyperlinks;
-        }, exec);
     }
 
 
@@ -207,9 +189,17 @@ public class Crawler {
         }
     }
 
+    /**
+     * This method is use for testing via Mockito
+     * @param db
+     */
+    public void setDb(Neo4jTransactionHandler db) {
+        this.db = db;
+    }
+
     private static Crawler instance;
     private Set<String> visited;
-    private Map<String, String> childToParent;
+    public Map<String, String> childToParent; // made public for testing
     private Neo4jTransactionHandler db;
     private ExecutorService exec;
     private static final Logger logger = LogManager.getLogger(Crawler.class);
@@ -292,22 +282,20 @@ public class Crawler {
 
         public long getAllNodes() {
             try {
-                // Query to count all nodes in the database
                 String query = "MATCH (n) RETURN count(n) AS count";
 
-                // Execute the query to get the count of all nodes
                 return this.session.readTransaction(tx -> {
-                    Result result = tx.run(query);  // Run the query
+                    Result result = tx.run(query);
                     if (result.hasNext()) {
-                        // Get the count from the result
+
                         Record record = result.next();
-                        return record.get("count").asLong();  // Return the count value as long
+                        return record.get("count").asLong();  // return the count value as long
                     }
-                    return 0L;  // If no nodes are found, return 0
+                    return 0L;
                 });
             } catch (Exception e) {
                 System.out.println("Failed to retrieve node count: " + e.getMessage());
-                return 0L;  // Return 0 in case of failure
+                return 0L;
             }
         }
 
