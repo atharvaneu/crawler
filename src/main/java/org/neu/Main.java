@@ -13,7 +13,7 @@ import java.util.SequencedSet;
 import java.util.concurrent.ExecutionException;
 
 public class Main {
-    public static void main(String[] args) throws  ExecutionException, InterruptedException, MalformedURLException {
+    public static void main(String[] args) throws RuntimeException, ExecutionException, InterruptedException, MalformedURLException {
 
         handleArgs(args);
 
@@ -32,10 +32,10 @@ public class Main {
         webcrawler.close();
     }
 
-    private static void handleArgs(String[] args) {
+    public static void handleArgs(String[] args) throws RuntimeException, NumberFormatException {
         if (args.length == 0) {
             logger.fatal("\nPlease provide method of running, and time for benchmarks.\nSee --help for more usage.");
-            System.exit(1);
+            throw new RuntimeException("InvalidArgumentException");
         }
 
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
@@ -43,7 +43,7 @@ public class Main {
         for (String arg: args) {
             if (!arg.startsWith("--")) {
                 logger.fatal("\nIncorrect format of arguments, please see --help for correct usage.");
-                System.exit(1);
+                throw new RuntimeException("InvalidArgumentException");
             }
 
             arg = arg.replace("--", "");
@@ -68,19 +68,12 @@ public class Main {
                     runtimeConfig.syncTime = Long.parseLong(value);
                 }
                 else {
-                    logger.fatal("Invalid argument key: " + key + " in argument --" + arg);
-                    System.exit(1);
+                    logger.fatal("Invalid argument key: {} in argument --{}", key, arg);
+                    throw new RuntimeException("InvalidArgumentException");
                 }
             }
 
         }
-
-//        else if (args.length > 0 && args[0].equals("--help")) {
-//        }
-//        else {
-//            System.out.println(Arrays.toString(args));
-//            System.exit(1);
-//        }
 
     }
 
