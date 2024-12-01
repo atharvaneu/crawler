@@ -19,6 +19,9 @@ public class SyncNeo4jTransactionHandler {
         System.out.println("Environment (dev)\n"+"hostname : "+hostname+"\nusername : "+username+"\npassword : "+password);
     }
 
+    /**
+     * Initialize the Neo4J driver as per the credentials specified in config.properties.
+     */
     public void initialize(){
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
@@ -37,6 +40,9 @@ public class SyncNeo4jTransactionHandler {
         }
     }
 
+    /**
+     * Close the Neo4J driver.
+     */
     public void close(){
         if (driver != null) {
             driver.close();
@@ -44,6 +50,10 @@ public class SyncNeo4jTransactionHandler {
         }
     }
 
+    /**
+     * Create a UNIQUE constraint on the u.address parameter such that for MERGE calls, a newer node with the same address is never created,
+     * rather reference the already existing node.
+     */
     private void createConstraints() {
         try{
             this.session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (u:url) REQUIRE u.address IS UNIQUE");
@@ -62,6 +72,13 @@ public class SyncNeo4jTransactionHandler {
         return null;
     }
 
+    /**
+     * For a parent URL and child URL, create (or retrieve if a node exists already) a node for each, create a relationship between them, and finally insert the
+     * relationship too.
+     *
+     * @param url The parent URL that will have an outgoing relationship
+     * @param dependent_url The child URL that will have an incoming relationship
+     */
     public void mergeNodeWithChildURL(String url, String dependent_url){
         try{
             this.session.executeWrite(tx->{
@@ -79,6 +96,10 @@ public class SyncNeo4jTransactionHandler {
         }
     }
 
+
+    /**
+     * Clear DB data. This is crucial for benchmarking and multiple runs.
+     */
     public void clearDatabase() {
         try{
             this.session.executeWrite(tx->{
@@ -96,6 +117,11 @@ public class SyncNeo4jTransactionHandler {
 
     }
 
+    /**
+     * Fetch and return the total number of nodes (URLs) inserted within the dedicated time limit.
+     *
+     * @return long Total number of nodes (URLs) in the database.
+     */
     public long getAllNodes() {
         try {
             String query = "MATCH (n) RETURN count(n) AS count";
@@ -120,6 +146,6 @@ public class SyncNeo4jTransactionHandler {
     private static String password;
     private Driver driver;
     private Session session;
-    private static final Logger logger = LogManager.getLogger(Crawler.class);
+    private static final Logger logger = LogManager.getLogger(SyncNeo4jTransactionHandler.class);
 
 }
