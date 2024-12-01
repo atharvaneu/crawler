@@ -9,8 +9,16 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.async.*;
 import org.neo4j.driver.async.AsyncSession;
 
+/**
+ * Provides utility methods for interacting with a Neo4j database, including creating constraints,
+ * managing connections, and executing asynchronous transactions.
+ */
 public class Neo4jTransactionHandler {
 
+    /**
+     * Constructs a new Neo4jTransactionHandler instance and initializes connection credentials
+     * using the {@link ConfigReader}.
+     */
     public Neo4jTransactionHandler() {
         ConfigReader configReader = new ConfigReader();
         hostname = configReader.getHostname();
@@ -19,12 +27,20 @@ public class Neo4jTransactionHandler {
         System.out.println("Environment (dev)\n"+"hostname : "+hostname+"\nusername : "+username+"\npassword : "+password);
     }
 
+    /**
+     * Creates a unique constraint on the `address` property for nodes with the `url` label.
+     * Ensures that duplicate entries are avoided in the Neo4j database.
+     */
     public void createConstraints() {
         try (Session session = driver.session(SessionConfig.forDatabase("neo4j"))) {
             session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (u:url) REQUIRE u.address IS UNIQUE");
         }
     }
 
+    /**
+     * Initializes the Neo4j driver and establishes a connection to the database.
+     * Verifies connectivity and creates constraints. Also initializes an asynchronous session.
+     */
     public void initialize(){
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
@@ -46,6 +62,9 @@ public class Neo4jTransactionHandler {
         }
     }
 
+    /**
+     * Closes the Neo4j driver and releases resources. Ensures proper shutdown of the database connection.
+     */
     public void close(){
         if (driver != null) {
             driver.close();
@@ -53,14 +72,18 @@ public class Neo4jTransactionHandler {
         }
     }
 
-    public List<String> getAllInboundNodes(String url){
-        return null;
-    }
-
-    public List<String> getAllOutboundNodes(String url){
-        return null;
-    }
-
+    /**
+     * Merges a node with a given URL and its child node, establishing a "contains" relationship between them.
+     *
+     * <p>
+     * The method executes asynchronously and ensures that both nodes and their relationship are
+     * created in the database if they do not already exist.
+     * </p>
+     *
+     * @param url The URL of the parent node.
+     * @param dependent_url The URL of the child node.
+     * @return A {@link CompletableFuture} representing the completion of the transaction.
+     */
     public CompletableFuture<Void> mergeNodeWithChildURL(String url, String dependent_url) {
         AsyncSession session = driver.asyncSession(SessionConfig.forDatabase("neo4j"));
         return session.executeWriteAsync(tx ->

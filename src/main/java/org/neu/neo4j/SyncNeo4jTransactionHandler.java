@@ -64,14 +64,6 @@ public class SyncNeo4jTransactionHandler {
 
     }
 
-    public List<String> getAllInboundNodes(String url){
-        return null;
-    }
-
-    public List<String> getAllOutboundNodes(String url){
-        return null;
-    }
-
     /**
      * For a parent URL and child URL, create (or retrieve if a node exists already) a node for each, create a relationship between them, and finally insert the
      * relationship too.
