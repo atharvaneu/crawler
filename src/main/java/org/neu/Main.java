@@ -32,6 +32,13 @@ public class Main {
         webcrawler.close();
     }
 
+    /**
+     * Handle arguments for running the application smoothly, and validating any errors.
+     *
+     * @param args
+     * @throws RuntimeException
+     * @throws NumberFormatException
+     */
     public static void handleArgs(String[] args) throws RuntimeException, NumberFormatException {
         if (args.length == 0) {
             logger.fatal("\nPlease provide method of running, and time for benchmarks.\nSee --help for more usage.");

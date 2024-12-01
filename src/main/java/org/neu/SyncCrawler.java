@@ -1,5 +1,7 @@
 package org.neu;
 
+import org.neu.neo4j.SyncNeo4jTransactionHandler;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -14,6 +16,11 @@ public class SyncCrawler {
 
     private SyncCrawler() {}
 
+    /**
+     * Singleton getInstance method for maintaining a single crawler instance throughout the running period of the application.
+     *
+     * @return SyncCrawler
+     */
     public static SyncCrawler getInstance() {
         if (instance == null) {
             instance = new SyncCrawler();
@@ -22,38 +29,58 @@ public class SyncCrawler {
         return instance;
     }
 
+    /**
+     * Initialize the crawler. All initializations such as file, network, and DB must be declared here.
+     */
     public void init() {
-        this.db = new Crawler.SyncNeo4jTransactionHandler();
+        this.db = new SyncNeo4jTransactionHandler();
         this.db.initialize();
         this.visited = new HashSet<>();
     }
 
+    /**
+     * Close the crawler. All closing such as file, network, and DB closing must be done here.
+     */
     public void close() {
         this.db.close();
     }
 
+    /**
+     * A wrapper over the BFS method to for a clean API.
+     *
+     * @param url
+     * @param timeoutMillis
+     * @throws IOException
+     */
     public void run(String url, long timeoutMillis) throws IOException {
         bfsTraversal(url,timeoutMillis);
     }
 
 
+    /**
+     * Given a root URL, start BFS synchronously on that by processing that URL and adding any valid neighbor URLs to the BFS queue.
+     *
+     * Note: to understand processing a URL, see `processURLAsync(String webpage)`
+     *
+     * @param webpage
+     * @param timeoutMillis
+     * @throws IOException
+     */
     public void bfsTraversal(String webpage, long timeoutMillis) throws IOException {
-        // Create a queue for BFS
+
         Queue<String> queue = new LinkedList<>();
-        // Push the root URL vertex into the queue
+
         queue.add(webpage);
-        // Mark the root URL as visited
+
         visited.add(webpage);
 
-        // Track the start time
         long startTime = System.currentTimeMillis();
 
-        // Iterate over the queue
         while (!queue.isEmpty()) {
-            // Check if the elapsed time exceeds the timeout
+            // exit the loop if time limit is exceeded
             if ((System.currentTimeMillis() - startTime) > timeoutMillis) {
                 System.out.println("Time limit reached. Stopping the BFS traversal.");
-                break; // Exit the loop if time limit is exceeded
+                break;
             }
 
             String url = queue.poll();
@@ -67,10 +94,18 @@ public class SyncCrawler {
             }
         }
 
-        // Optionally, perform any necessary cleanup or final operations here
         System.out.println("BFS traversal finished.");
     }
 
+    /**
+     * Process URLs synchronously using Java's CompletableFuture API.
+     * Processing of a URL includes fetching the HTML content available at the URL, grepping any URLs in that content, and finally adding those URLs to the BFS queue.
+     *
+     * @param webpage
+     * @return
+     * @throws MalformedURLException
+     * @throws IOException
+     */
     private List<String> processURL(String webpage) throws MalformedURLException, IOException {
         List<String> lines = new ArrayList<>();
         List<String> hyperlinks = new ArrayList<>();
@@ -105,31 +140,26 @@ public class SyncCrawler {
         return hyperlinks;
     }
 
+    /**
+     * Extracts URLs in O(n) runtime from within HTML content by looking for the substring `http`.
+     *
+     * @param links
+     * @param html
+     */
     public static void grepHyperLinks(List<String> links, String html) {
-        int start = 0;
-
-        while (start != -1 && start < html.length()) {
-            start = html.indexOf("http", start);
-            if (start != -1) {
-                int end = html.indexOf("\"", start + 1);
-                if (end == -1) {  // If no closing quote is found, end the search
-                    break;
-                }
-                String url = html.substring(start, end);
-                if (url.endsWith("/")) {
-                    url = url.substring(0, url.length() - 1);
-                }
-                if(url.length()<=1000) links.add(url);
-                start = end + 1;  // Move start to just past the last found URL to continue search
-            }
-        }
+        Crawler.grepHyperLinks(links, html);
     }
 
+    /**
+     * Fetch and return the total number of nodes (URLs) inserted in the database in the specified time period.
+     *
+     * @return long Total number of nodes (URLs) inserted in the database.
+     */
     public long getAllNodes(){
         return this.db.getAllNodes();
     }
 
     private static SyncCrawler instance;
     private Set<String> visited;
-    private Crawler.SyncNeo4jTransactionHandler db;
+    private SyncNeo4jTransactionHandler db;
 }
