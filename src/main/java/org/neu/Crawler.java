@@ -41,7 +41,8 @@ public class Crawler {
         this.db = new Neo4jTransactionHandler();
         this.db.initialize();
 
-        this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        int optimalThreads = Math.min(32, Runtime.getRuntime().availableProcessors() * 2);
+        this.exec = Executors.newFixedThreadPool(optimalThreads);
         this.visited = ConcurrentHashMap.newKeySet();
         this.childToParent = new ConcurrentHashMap<>();
 
