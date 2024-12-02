@@ -26,7 +26,7 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
      * @throws InterruptedException If the main thread is interrupted during sleep.
      */
     @Override
-    public void benchmark() throws MalformedURLException, IOException, InterruptedException {
+    public void benchmark(String[] pages) throws MalformedURLException, IOException, InterruptedException {
         String[] args = null;
 
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
@@ -42,7 +42,8 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
             Crawler webcrawler = Crawler.getInstance();
             try {
                 webcrawler.init();
-                webcrawler.run("https://www.wikipedia.org/");
+                for (String _page: pages)
+                    webcrawler.run(_page);
             } catch (Exception e) {
                 System.out.println("Benchmark for " + ms + " -> " + webcrawler.getAllNodes());
             } finally {
@@ -62,4 +63,5 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
 //        webcrawler.close();
         System.out.println("Crawler stopped after " + ms + " milliseconds.");
     }
+
 }

@@ -1,5 +1,8 @@
 package org.neu.benchmark;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.neu.Crawler;
 import org.neu.RuntimeConfig;
 import org.neu.SyncCrawler;
 
@@ -26,8 +29,7 @@ public class BenchmarkSyncCrawler implements Benchmarker {
      * @throws InterruptedException If the benchmark is interrupted during its operation.
      */
     @Override
-    public void benchmark() throws MalformedURLException, IOException, InterruptedException {
-        String[] args = null;
+    public void benchmark(String[] pages) throws MalformedURLException, IOException, InterruptedException {
 
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
@@ -42,16 +44,11 @@ public class BenchmarkSyncCrawler implements Benchmarker {
 
         for (String _page : pages) {
             webcrawler.run(_page, ms);
-            System.out.println("Benchmark for " + ms + " -> " + webcrawler.getAllNodes());
+            logger.info("Benchmark for {} -> {}", ms, webcrawler.getAllNodes());
         }
 
         webcrawler.close();
     }
 
-    /**
-     * List of pages to benchmark with the synchronous crawler.
-     */
-    private static String[] pages = {
-            "https://www.wikipedia.org/"
-    };
+    private static final Logger logger = LogManager.getLogger(BenchmarkSyncCrawler.class);
 }

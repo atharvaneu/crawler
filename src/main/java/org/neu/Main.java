@@ -26,13 +26,13 @@ public class Main {
         if (runtimeConfig.syncMode) {
             Benchmarker syncBenchmarker = new BenchmarkSyncCrawler();
 
-            syncBenchmarker.benchmark();
+            syncBenchmarker.benchmark(pages);
         }
 
         if (runtimeConfig.asyncMode) {
             Benchmarker asyncBenchmarker = new BenchmarkAsyncCrawler();
 
-            asyncBenchmarker.benchmark();
+            asyncBenchmarker.benchmark(pages);
         }
 
 
