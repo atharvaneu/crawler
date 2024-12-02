@@ -48,7 +48,7 @@ public class SyncNeo4jTransactionHandler {
             this.clearDatabase();
 //            Thread.sleep(1000);
             driver.close();
-            System.out.println("Driver closed.");
+            System.out.println("(SYNC) Driver closed.");
         }
     }
 

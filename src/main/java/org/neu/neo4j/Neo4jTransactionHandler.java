@@ -45,8 +45,8 @@ public class Neo4jTransactionHandler {
      */
     public void initialize(){
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password), Config.builder().withMaxConnectionPoolSize(50)
-                .withConnectionTimeout(30000, TimeUnit.MILLISECONDS)
-                .withMaxTransactionRetryTime(30000, TimeUnit.MILLISECONDS)
+                .withConnectionTimeout(0, TimeUnit.MILLISECONDS)
+                .withMaxTransactionRetryTime(0, TimeUnit.MILLISECONDS)
                 .withFetchSize(1000).build());
         try {
             this.driver.verifyConnectivity();
@@ -75,6 +75,7 @@ public class Neo4jTransactionHandler {
             this.clearDatabase().join();
             driver.close();
             logger.info("Neo4J connection closed");
+            System.out.println("(ASYNC) Driver closed.");
         }
     }
 

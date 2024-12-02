@@ -44,7 +44,7 @@ public class BenchmarkSyncCrawler implements Benchmarker {
 
         for (String _page : pages) {
             webcrawler.run(_page, ms);
-            logger.info("Benchmark for {} -> {}", ms, webcrawler.getAllNodes());
+            System.out.println("(SYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
         }
 
         webcrawler.close();

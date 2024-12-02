@@ -67,26 +67,27 @@ public class SyncCrawler {
      * @throws IOException
      */
     public void bfsTraversal(String webpage, long timeoutMillis) throws IOException {
-
         Queue<String> queue = new LinkedList<>();
-
         queue.add(webpage);
-
         visited.add(webpage);
-
         long startTime = System.currentTimeMillis();
 
         while (!queue.isEmpty()) {
-            // exit the loop if time limit is exceeded
             if ((System.currentTimeMillis() - startTime) > timeoutMillis) {
                 System.out.println("Time limit reached. Stopping the BFS traversal.");
                 break;
             }
 
             String url = queue.poll();
-
             List<String> childLinks = processURL(url);
+
             for (String _link : childLinks) {
+                // Check time limit for each child link processing
+                if ((System.currentTimeMillis() - startTime) > timeoutMillis) {
+                    System.out.println("Time limit reached during child processing. Stopping the BFS traversal.");
+                    return;
+                }
+
                 if (visited.contains(_link)) continue;
                 visited.add(_link);
                 this.db.mergeNodeWithChildURL(url, _link);
@@ -96,7 +97,6 @@ public class SyncCrawler {
 
         System.out.println("BFS traversal finished.");
     }
-
     /**
      * Process URLs synchronously using Java's CompletableFuture API.
      * Processing of a URL includes fetching the HTML content available at the URL, grepping any URLs in that content, and finally adding those URLs to the BFS queue.

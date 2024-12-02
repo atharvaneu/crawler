@@ -2,9 +2,6 @@ package org.neu;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.neo4j.driver.*;
-import org.neo4j.driver.Record;
-import org.neu.neo4j.ConfigReader;
 import org.neu.neo4j.Neo4jTransactionHandler;
 
 import java.io.BufferedReader;
@@ -91,28 +88,50 @@ public class Crawler {
      * @throws MalformedURLException
      */
     private void bfsTraversal(String rootUrl) throws InterruptedException, ExecutionException, MalformedURLException {
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = RuntimeConfig.getInstance().asyncTime;
+
         ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
         queue.add(rootUrl);
         visited.add(rootUrl);
         childToParent.put(rootUrl, "");
 
-        for (int depth = 0; depth < 3; depth++) {
-            List<String> currentLevel = new ArrayList<>();
+        while (!queue.isEmpty() && !shouldStop) {
+            if ((System.currentTimeMillis() - startTime) > timeoutMillis) {
+                logger.info("Time limit of {}ms reached. Stopping the BFS traversal.");
+                shouldStop = true;
+                break;
+            }
 
-            while (!queue.isEmpty()) {
+            List<String> currentLevel = new ArrayList<>();
+            while (!queue.isEmpty() && !shouldStop) {
                 currentLevel.add(queue.poll());
             }
 
-            if (currentLevel.isEmpty()) break;
+            if (shouldStop) break;
 
             List<CompletableFuture<Void>> levelFutures = new ArrayList<>();
 
             for (String currentUrl : currentLevel) {
+                if (shouldStop) {
+                    levelFutures.forEach(f -> f.cancel(true));
+                    return;
+                }
+
                 CompletableFuture<Void> urlProcessingFuture = processURLAsync(currentUrl)
                         .thenCompose(childLinks -> {
+                            if (shouldStop) {
+                                return CompletableFuture.completedFuture(null);
+                            }
+
                             List<CompletableFuture<Void>> childFutures = new ArrayList<>();
 
                             for (String childLink : childLinks) {
+                                if (shouldStop) {
+                                    childFutures.forEach(f -> f.cancel(true));
+                                    break;
+                                }
+
                                 logger.info("Current link being processed: " + childLink);
 
                                 CompletableFuture<Void> childFuture;
@@ -123,7 +142,9 @@ public class Crawler {
                                     childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                             .toCompletableFuture()
                                             .thenAccept(v -> {
-//                                                System.out.println(currentUrl + " >>> " + childLink);
+                                                if (shouldStop) {
+                                                    throw new CancellationException("Crawler stopped");
+                                                }
                                             });
 
                                 } else {
@@ -132,29 +153,40 @@ public class Crawler {
                                         childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                                 .toCompletableFuture()
                                                 .thenAccept(v -> {
-//                                                    System.out.println("Additional edge: " + currentUrl + " >>> " + childLink);
+                                                    if (shouldStop) {
+                                                        throw new CancellationException("Crawler stopped");
+                                                    }
                                                 });
                                     } else {
                                         childFuture = CompletableFuture.completedFuture(null);
                                     }
                                 }
 
-                                childFutures.add(childFuture.exceptionally(ex -> {
-//                                    System.err.println("Error processing link " + childLink + ": " + ex.getMessage());
-                                    return null;
-                                }));
+                                childFutures.add(childFuture.exceptionally(ex -> null));
                             }
 
                             return CompletableFuture.allOf(childFutures.toArray(new CompletableFuture[0]));
                         });
 
-                levelFutures.add(urlProcessingFuture);
+                levelFutures.add(urlProcessingFuture.exceptionally(ex -> null));
             }
 
-            CompletableFuture.allOf(levelFutures.toArray(new CompletableFuture[0])).get();
+            if (shouldStop) {
+                levelFutures.forEach(f -> f.cancel(true));
+                return;
+            }
+
+            try {
+                CompletableFuture.allOf(levelFutures.toArray(new CompletableFuture[0]))
+                        .orTimeout(timeoutMillis - (System.currentTimeMillis() - startTime), TimeUnit.MILLISECONDS)
+                        .join();
+            } catch (Exception e) {
+                logger.info("BFS traversal interrupted or timed out");
+                shouldStop = true;
+                return;
+            }
         }
     }
-
     /**
      * Process URLs asynchronously using Java's CompletableFuture API.
      * Processing of a URL includes fetching the HTML content available at the URL, grepping any URLs in that content, and finally adding those URLs to the BFS queue.
@@ -259,6 +291,30 @@ public class Crawler {
         return this.db.getAllNodes().join();
     }
 
+
+
+    public void forceStopAllOperations() {
+        shouldStop = true;
+
+        // Shutdown executor service immediately
+        if (exec != null && !exec.isShutdown()) {
+            exec.shutdownNow();
+        }
+
+        // Clear any pending operations
+        visited.clear();
+        childToParent.clear();
+
+        // Force close DB connection pool
+        if (db != null) {
+            try {
+                db.close();
+            } catch (Exception e) {
+                logger.error("Error closing database: " + e.getMessage());
+            }
+        }
+    }
+
     /**
      * This method is use for testing via Mockito
      * @param db
@@ -267,8 +323,17 @@ public class Crawler {
         this.db = db;
     }
 
+    public void setShouldStop(boolean shouldStop) {
+        this.shouldStop = shouldStop;
+    }
+
+    public boolean getShouldStop() {
+        return shouldStop;
+    }
+
     private static Crawler instance;
     private Set<String> visited;
+    private volatile boolean shouldStop;
     public Map<String, String> childToParent; // made public for testing
     private Neo4jTransactionHandler db;
     private ExecutorService exec;

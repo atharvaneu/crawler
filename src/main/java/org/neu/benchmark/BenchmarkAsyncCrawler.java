@@ -27,41 +27,46 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
      */
     @Override
     public void benchmark(String[] pages) throws MalformedURLException, IOException, InterruptedException {
-        String[] args = null;
 
+        // Retrieve runtime configuration instance
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
+        // Exit if asynchronous mode is not enabled
         if (!runtimeConfig.asyncMode) {
             return;
         }
 
+        // Get the configured duration for the benchmark
         long ms = runtimeConfig.asyncTime;
 
+        // Initialize the crawler
 
+        Crawler webcrawler = Crawler.getInstance();
+        // Create and start the crawler thread
         Thread crawlerThread = new Thread(() -> {
-            Crawler webcrawler = Crawler.getInstance();
             try {
                 webcrawler.init();
-                for (String _page: pages)
-                    webcrawler.run(_page);
+                webcrawler.run("https://www.wikipedia.org/");
             } catch (Exception e) {
-                System.out.println("Benchmark for " + ms + " -> " + webcrawler.getAllNodes());
-            } finally {
-                webcrawler.close();
+                System.out.println("Crawler interrupted or finished execution: " + e.getMessage());
             }
+            webcrawler.close();
         });
 
         crawlerThread.start();
 
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            System.out.println("Main thread interrupted: " + e.getMessage());
-        }
+        crawlerThread.join(ms);
+//        // Main thread sleeps for the configured duration
+//        try {
+//            Thread.sleep(ms);
+//        } catch (InterruptedException e) {
+//            System.out.println("Main thread interrupted: " + e.getMessage());
+//        }
+//
+//        // Interrupt the crawler thread and close the crawler
+//        crawlerThread.interrupt();
+        System.out.println("(ASYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
 
-        crawlerThread.interrupt();
-//        webcrawler.close();
-        System.out.println("Crawler stopped after " + ms + " milliseconds.");
+        System.exit(1);
     }
-
 }

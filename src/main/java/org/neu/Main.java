@@ -106,7 +106,7 @@ public class Main {
 
     private static final Logger logger = LogManager.getLogger(Main.class);
     private static String[] pages = {
-            "https://athk.dev",
+//            "https://athk.dev",
             "https://www.wikipedia.org/"
     };
 }
