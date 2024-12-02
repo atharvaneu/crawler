@@ -125,8 +125,11 @@ public class Crawler {
                             }
 
                             List<CompletableFuture<Void>> childFutures = new ArrayList<>();
-
-                            for (String childLink : childLinks) {
+                            List<String> validChildLinks = childLinks.stream()
+                                    .filter(link -> link.startsWith("http://") || link.startsWith("https://")) // Valid protocols
+                                    .filter(link -> !link.contains(".onion")) // Exclude dark web links
+                                    .collect(Collectors.toList());
+                            for (String childLink : validChildLinks) {
                                 if (shouldStop) {
                                     childFutures.forEach(f -> f.cancel(true));
                                     break;
