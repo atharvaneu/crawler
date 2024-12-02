@@ -2,6 +2,9 @@ package org.neu;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.neu.benchmark.BenchmarkAsyncCrawler;
+import org.neu.benchmark.BenchmarkSyncCrawler;
+import org.neu.benchmark.Benchmarker;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -13,23 +16,38 @@ import java.util.SequencedSet;
 import java.util.concurrent.ExecutionException;
 
 public class Main {
-    public static void main(String[] args) throws RuntimeException, ExecutionException, InterruptedException, MalformedURLException {
+    public static void main(String[] args) throws RuntimeException, ExecutionException, InterruptedException, MalformedURLException, IOException {
 
         handleArgs(args);
 
-        Crawler webcrawler = Crawler.getInstance();
-        /**
-         * Making the webcrawler instantiation into a singleton, with init and close methods - this is because it would help in calling webcrawler.run(webpage)
-         * method on multiple start pages (preferrably on an array) instead of just a single link
-         */
+        RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
-        webcrawler.init();
+        if (runtimeConfig.syncMode) {
+            Benchmarker syncBenchmarker = new BenchmarkSyncCrawler();
 
-        for (String _page: pages) {
-            webcrawler.run(_page);
+            syncBenchmarker.benchmark();
         }
 
-        webcrawler.close();
+        if (runtimeConfig.asyncMode) {
+            Benchmarker asyncBenchmarker = new BenchmarkAsyncCrawler();
+
+            asyncBenchmarker.benchmark();
+        }
+
+
+//        Crawler webcrawler = Crawler.getInstance();
+//        /**
+//         * Making the webcrawler instantiation into a singleton, with init and close methods - this is because it would help in calling webcrawler.run(webpage)
+//         * method on multiple start pages (preferrably on an array) instead of just a single link
+//         */
+//
+//        webcrawler.init();
+//
+//        for (String _page: pages) {
+//            webcrawler.run(_page);
+//        }
+//
+//        webcrawler.close();
     }
 
     /**
@@ -83,7 +101,6 @@ public class Main {
         }
 
     }
-
 
     private static final Logger logger = LogManager.getLogger(Main.class);
     private static String[] pages = {
