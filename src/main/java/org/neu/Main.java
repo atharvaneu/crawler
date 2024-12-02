@@ -22,6 +22,7 @@ public class Main {
 
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
+
         if (runtimeConfig.syncMode) {
             Benchmarker syncBenchmarker = new BenchmarkSyncCrawler();
 
@@ -33,6 +34,7 @@ public class Main {
 
             asyncBenchmarker.benchmark();
         }
+
 
 
 //        Crawler webcrawler = Crawler.getInstance();

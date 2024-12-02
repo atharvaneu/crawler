@@ -32,7 +32,7 @@ public class SyncCrawler {
     /**
      * Initialize the crawler. All initializations such as file, network, and DB must be declared here.
      */
-    public void init() {
+    public void init() throws InterruptedException {
         this.db = new SyncNeo4jTransactionHandler();
         this.db.initialize();
         this.visited = new HashSet<>();
@@ -41,7 +41,7 @@ public class SyncCrawler {
     /**
      * Close the crawler. All closing such as file, network, and DB closing must be done here.
      */
-    public void close() {
+    public void close() throws InterruptedException {
         this.db.close();
     }
 

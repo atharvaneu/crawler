@@ -2,10 +2,12 @@ package org.neu.neo4j;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.async.*;
 import org.neo4j.driver.async.AsyncSession;
 
@@ -42,7 +44,10 @@ public class Neo4jTransactionHandler {
      * Verifies connectivity and creates constraints. Also initializes an asynchronous session.
      */
     public void initialize(){
-        this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
+        this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password), Config.builder().withMaxConnectionPoolSize(50)
+                .withConnectionTimeout(30000, TimeUnit.MILLISECONDS)
+                .withMaxTransactionRetryTime(30000, TimeUnit.MILLISECONDS)
+                .withFetchSize(1000).build());
         try {
             this.driver.verifyConnectivity();
             logger.info("Connection to Neo4J established");
@@ -67,6 +72,7 @@ public class Neo4jTransactionHandler {
      */
     public void close(){
         if (driver != null) {
+            this.clearDatabase().join();
             driver.close();
             logger.info("Neo4J connection closed");
         }
@@ -85,20 +91,65 @@ public class Neo4jTransactionHandler {
      * @return A {@link CompletableFuture} representing the completion of the transaction.
      */
     public CompletableFuture<Void> mergeNodeWithChildURL(String url, String dependent_url) {
-        AsyncSession session = driver.asyncSession(SessionConfig.forDatabase("neo4j"));
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
         return session.executeWriteAsync(tx ->
                 tx.runAsync("MERGE (u:url {address: $url}) " +
+                                        "WITH u " +
                                         "MERGE (u_child:url {address: $dependent_url}) " +
+                                        "WITH u " +
                                         "MERGE (u)-[r:contains]->(u_child) " +
                                         "RETURN u.address",
                                 Values.parameters("url", url, "dependent_url", dependent_url))
-                        .thenCompose(ResultCursor::consumeAsync)        ).thenCompose(resultSummary -> {
-
+                        .thenCompose(ResultCursor::consumeAsync)
+        ).thenCompose(resultSummary -> {
             return session.closeAsync();
         }).exceptionally(error -> {
             System.out.println("Failed to insert node due to: " + error.getMessage());
             session.closeAsync();
             return null;
+        }).toCompletableFuture();
+    }
+
+    /**
+     * Clear DB data. This is crucial for benchmarking and multiple runs.
+     */
+    public CompletableFuture<Void> clearDatabase() {
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
+
+        return session.executeWriteAsync(tx ->
+                tx.runAsync(
+                        "MATCH (a) -[r] -> () " +
+                                "DELETE a, r " +
+                                "WITH count(*) as dummy " +  // Added WITH clause
+                                "MATCH (a) " +
+                                "DELETE (a)"
+                ).thenCompose(ResultCursor::consumeAsync)
+        ).thenCompose(ignored -> {
+            logger.info("Database cleared successfully");
+            return session.closeAsync();
+        }).exceptionally(error -> {
+            logger.error("Failed to clear database: " + error.getMessage());
+            session.closeAsync();
+            return null;
+        }).toCompletableFuture();
+    }
+    /**
+     * Fetch and return the total number of nodes (URLs) inserted within the dedicated time limit.
+     *
+     * @return long Total number of nodes (URLs) in the database.
+     */
+    public CompletableFuture<Long> getAllNodes() {
+        AsyncSession session = driver.asyncSession(SessionConfig.forDatabase("neo4j"));
+        return session.executeReadAsync(tx ->
+                tx.runAsync("MATCH (n) RETURN count(n) AS count")
+                        .thenCompose(cursor -> cursor.singleAsync())
+                        .thenApply(record -> record.get("count").asLong())
+        ).thenCompose(count -> {
+            return session.closeAsync().thenApply(ignored -> count);
+        }).exceptionally(error -> {
+            logger.error("Failed to retrieve node count: " + error.getMessage());
+            session.closeAsync();
+            return 0L;
         }).toCompletableFuture();
     }
 

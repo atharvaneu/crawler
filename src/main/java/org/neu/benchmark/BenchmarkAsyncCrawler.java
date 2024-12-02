@@ -29,42 +29,37 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
     public void benchmark() throws MalformedURLException, IOException, InterruptedException {
         String[] args = null;
 
-        // Retrieve runtime configuration instance
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
-        // Exit if asynchronous mode is not enabled
         if (!runtimeConfig.asyncMode) {
             return;
         }
 
-        // Get the configured duration for the benchmark
         long ms = runtimeConfig.asyncTime;
 
-        // Initialize the crawler
-        Crawler webcrawler = Crawler.getInstance();
-        webcrawler.init();
 
-        // Create and start the crawler thread
         Thread crawlerThread = new Thread(() -> {
+            Crawler webcrawler = Crawler.getInstance();
             try {
+                webcrawler.init();
                 webcrawler.run("https://www.wikipedia.org/");
             } catch (Exception e) {
-                System.out.println("Crawler interrupted or finished execution: " + e.getMessage());
+                System.out.println("Benchmark for " + ms + " -> " + webcrawler.getAllNodes());
+            } finally {
+                webcrawler.close();
             }
         });
 
         crawlerThread.start();
 
-        // Main thread sleeps for the configured duration
         try {
             Thread.sleep(ms);
         } catch (InterruptedException e) {
             System.out.println("Main thread interrupted: " + e.getMessage());
         }
 
-        // Interrupt the crawler thread and close the crawler
         crawlerThread.interrupt();
-        webcrawler.close();
+//        webcrawler.close();
         System.out.println("Crawler stopped after " + ms + " milliseconds.");
     }
 }

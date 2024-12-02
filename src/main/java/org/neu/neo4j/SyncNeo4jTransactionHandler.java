@@ -22,7 +22,7 @@ public class SyncNeo4jTransactionHandler {
     /**
      * Initialize the Neo4J driver as per the credentials specified in config.properties.
      */
-    public void initialize(){
+    public void initialize() {
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
             this.driver.verifyConnectivity();
@@ -30,7 +30,7 @@ public class SyncNeo4jTransactionHandler {
         } catch (Exception e) {
             System.out.println("Failed to connect to the database: " + e.getMessage());
         }
-        try{
+        try {
             this.session = this.driver.session(SessionConfig.builder().withDatabase("neo4j").build());
             createConstraints();
         }
@@ -43,8 +43,10 @@ public class SyncNeo4jTransactionHandler {
     /**
      * Close the Neo4J driver.
      */
-    public void close(){
+    public void close() {
         if (driver != null) {
+            this.clearDatabase();
+//            Thread.sleep(1000);
             driver.close();
             System.out.println("Driver closed.");
         }
@@ -96,14 +98,16 @@ public class SyncNeo4jTransactionHandler {
         try{
             this.session.executeWrite(tx->{
                 tx.run(
-                        "MATCH (a) -[r] -> () DELETE a, r " + // delete all relationships
-                                "MATCH (a) DELETE (a)" // delete all nodes
+                        "MATCH (a) -[r] -> () " +
+                                "DELETE a, r " +
+                                "WITH count(*) as dummy " +  // Added WITH clause
+                                "MATCH (a) " +
+                                "DELETE (a)"
                 ).consume();
                 return null;
             });
         }
         catch(Exception e){
-            System.out.println("Failed to insert node: " + e.getMessage());
             logger.fatal("Failed to clear database: {}", e.getMessage());
         }
 
@@ -118,7 +122,7 @@ public class SyncNeo4jTransactionHandler {
         try {
             String query = "MATCH (n) RETURN count(n) AS count";
 
-            return this.session.readTransaction(tx -> {
+            return this.session.executeRead(tx -> {
                 Result result = tx.run(query);
                 if (result.hasNext()) {
 

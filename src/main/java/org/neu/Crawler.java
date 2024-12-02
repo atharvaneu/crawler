@@ -40,6 +40,7 @@ public class Crawler {
     public void init() {
         this.db = new Neo4jTransactionHandler();
         this.db.initialize();
+
         this.exec = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         this.visited = ConcurrentHashMap.newKeySet();
         this.childToParent = new ConcurrentHashMap<>();
@@ -51,7 +52,6 @@ public class Crawler {
      * Close the crawler. All closing such as file, network, DB, and executorService closing must be done here.
      */
     public void close() {
-        this.db.close();
         this.exec.shutdown();
         try {
             if (!this.exec.awaitTermination(60, TimeUnit.SECONDS)) {
@@ -60,6 +60,7 @@ public class Crawler {
         } catch (InterruptedException e) {
             this.exec.shutdownNow();
         }
+        this.db.close();
 
         logger.info("Crawler terminated");
     }
@@ -245,6 +246,16 @@ public class Crawler {
                 start = end + 1;  // Move start to just past the last found URL to continue search
             }
         }
+    }
+
+
+    /**
+     * Fetch and return the total number of nodes (URLs) asynchronously inserted in the database in the specified time period.
+     *
+     * @return long Total number of nodes (URLs) inserted in the database.
+     */
+    public long getAllNodes(){
+        return this.db.getAllNodes().join();
     }
 
     /**

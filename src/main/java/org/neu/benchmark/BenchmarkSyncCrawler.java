@@ -29,31 +29,22 @@ public class BenchmarkSyncCrawler implements Benchmarker {
     public void benchmark() throws MalformedURLException, IOException, InterruptedException {
         String[] args = null;
 
-        // Retrieve runtime configuration instance
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
-        // Exit if synchronous mode is not enabled
         if (!runtimeConfig.syncMode) {
             return;
         }
 
-        // Get the singleton instance of SyncCrawler
         SyncCrawler webcrawler = SyncCrawler.getInstance();
 
-        /**
-         * Making the webcrawler a singleton with init and close methods 
-         * to facilitate reuse for multiple start pages.
-         */
         long ms = runtimeConfig.syncTime;
         webcrawler.init();
 
-        // Run the crawler for each page in the list
         for (String _page : pages) {
             webcrawler.run(_page, ms);
             System.out.println("Benchmark for " + ms + " -> " + webcrawler.getAllNodes());
         }
 
-        // Close the crawler
         webcrawler.close();
     }
 
@@ -61,6 +52,6 @@ public class BenchmarkSyncCrawler implements Benchmarker {
      * List of pages to benchmark with the synchronous crawler.
      */
     private static String[] pages = {
-            "https://athk.dev/"
+            "https://www.wikipedia.org/"
     };
 }
