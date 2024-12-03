@@ -125,10 +125,14 @@ public class Crawler {
                             }
 
                             List<CompletableFuture<Void>> childFutures = new ArrayList<>();
-                            List<String> validChildLinks = childLinks.stream()
-                                    .filter(link -> link.startsWith("http://") || link.startsWith("https://")) // Valid protocols
-                                    .filter(link -> !link.contains(".onion")) // Exclude dark web links
-                                    .collect(Collectors.toList());
+//                            List<String> validChildLinks = childLinks.stream()
+//                                    .filter(link -> link.startsWith("http://") || link.startsWith("https://")) // Valid protocols
+//                                    .filter(link -> !link.contains(".onion")) // Exclude dark web links
+//                                    .collect(Collectors.toList());
+
+                            List<String> validChildLinks = childLinks.stream().filter(Crawler::santize).distinct().toList();
+
+
                             for (String childLink : validChildLinks) {
                                 if (shouldStop) {
                                     childFutures.forEach(f -> f.cancel(true));
@@ -139,13 +143,11 @@ public class Crawler {
 
                                 CompletableFuture<Void> childFuture;
 
-                                // Add to queue and childToParent only if not visited
                                 if (visited.add(childLink)) {
                                     queue.add(childLink);
                                     childToParent.put(childLink, currentUrl);
                                 }
 
-                                // Always try to create the relationship unless it would create a cycle
                                 if (!wouldCreateCycle(currentUrl, childLink)) {
                                     childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                             .toCompletableFuture()
@@ -165,7 +167,6 @@ public class Crawler {
                         });
                 levelFutures.add(urlProcessingFuture.exceptionally(ex -> null));
             }
-
             if (shouldStop) {
                 levelFutures.forEach(f -> f.cancel(true));
                 return;
@@ -182,6 +183,49 @@ public class Crawler {
             }
         }
     }
+
+    public static boolean santize(String link) {
+        if (!link.startsWith("http://") && !link.startsWith("https://")) {
+            return false;
+        }
+
+        String lowerLink = link.toLowerCase();
+
+        // unwanted protocols and schemes
+        if (lowerLink.startsWith("javascript:") ||
+                lowerLink.startsWith("data:") ||
+                lowerLink.startsWith("file:") ||
+                lowerLink.startsWith("ftp:") ||
+                lowerLink.startsWith("ipfs://") ||
+                lowerLink.startsWith("magnet:") ||
+                lowerLink.contains(".onion/") ||
+                lowerLink.contains(".i2p/")) {
+            return false;
+        }
+
+        // common non-webpage extensions
+        if (lowerLink.matches(".+\\.(png|jpg|jpeg|gif|pdf|zip|rar|tar|gz|exe|dmg|iso|dll|jar|apk|mp3|mp4|avi|mov|wmv|flv|swf|xml|json|css|js)$")) {
+            return false;
+        }
+
+        // emails and telephones
+        if (lowerLink.startsWith("mailto:") || lowerLink.startsWith("tel:")) {
+            return false;
+        }
+
+        // potential spam URLs that are more than 2000 characters
+        if (link.length() > 2000) {
+            return false;
+        }
+
+        if (link.split("\\?").length > 1) {
+            String queryPart = link.split("\\?")[1];
+            return queryPart.split("&").length <= 10;
+        }
+
+        return true;
+    }
+
     /**
      * Process URLs asynchronously using Java's CompletableFuture API.
      * Processing of a URL includes fetching the HTML content available at the URL, grepping any URLs in that content, and finally adding those URLs to the BFS queue.

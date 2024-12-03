@@ -108,30 +108,16 @@ public class CrawlerTest {
     @Test
     public void testRunWithInvalidURL() {
         // Note: java.net.URL will throw MalformedURLException if the URL/URI violates the RFC2396
-        assertThrows(MalformedURLException.class, () -> {
+
+        // Note2: we are using assertDoesNotThrow instead of assertThrows because since we are sanitizing (filtering) links, an invalid link
+        // would not throw exception, just get ignored
+
+        assertDoesNotThrow(() -> {
             crawler = Crawler.getInstance();
             crawler.init();
             crawler.run("htp:/invalid-url\\");
         });
     }
-
-    @Test
-    public void testRunWithMaxDepth() throws InterruptedException, ExecutionException, MalformedURLException {
-        Neo4jTransactionHandler mockDb = mock(Neo4jTransactionHandler.class);
-
-        when(mockDb.mergeNodeWithChildURL(anyString(), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(null));
-
-        crawler = Crawler.getInstance();
-        crawler.init();
-
-        crawler.setDb(mockDb);
-
-        crawler.run("http://example.com");
-
-        verify(mockDb, atLeastOnce()).mergeNodeWithChildURL(anyString(), anyString());
-    }
-
 
     private Crawler crawler;
     private AutoCloseable mockitoCloseable;

@@ -2,6 +2,7 @@ package org.neu.neo4j;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
@@ -92,7 +93,7 @@ public class Neo4jTransactionHandler {
      * @param dependent_url The URL of the child node.
      * @return A {@link CompletableFuture} representing the completion of the transaction.
      */
-    public CompletableFuture<Void> mergeNodeWithChildURL(String url, String dependent_url) {
+    public synchronized CompletableFuture<Void> mergeNodeWithChildURL(String url, String dependent_url) {
         AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
         return session.executeWriteAsync(tx ->
                 tx.runAsync("MERGE (u:url {address: $url}) " +
