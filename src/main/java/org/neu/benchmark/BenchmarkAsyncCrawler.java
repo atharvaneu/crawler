@@ -41,6 +41,8 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
         // Create and start the crawler thread
         Thread crawlerThread = new Thread(() -> {
             try {
+                System.out.println("\n======================================(ASYNC) CRAWLER CLOSED===========================================\n");
+
                 webcrawler.init();
                 webcrawler.run(page);
 
@@ -74,6 +76,8 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
 //        webcrawler.getDb().printDatabaseContents().join();
 
         webcrawler.close();
+
+        System.out.println("\n======================================(ASYNC) CRAWLER CLOSED===========================================\n");
 
         System.exit(1);
     }

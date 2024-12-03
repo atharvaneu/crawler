@@ -53,7 +53,7 @@ public class Neo4jTransactionHandler {
         try {
             this.driver.verifyConnectivity();
             logger.info("Connection to Neo4J established");
-            System.out.println("Connection established");
+            System.out.println("(ASYNC) Connection established");
             createConstraints();
         } catch (Exception e) {
             logger.fatal("Failed to connect to the database: " + e.getMessage());
@@ -106,7 +106,6 @@ public class Neo4jTransactionHandler {
                         .thenCompose(ResultCursor::consumeAsync)        ).thenCompose(resultSummary -> {
             return session.closeAsync();
         }).exceptionally(error -> {
-            System.out.println("Failed to insert node due to: " + error.getMessage());
             session.closeAsync();
             return null;
         }).toCompletableFuture();
@@ -177,60 +176,6 @@ public class Neo4jTransactionHandler {
             logger.error("Failed to retrieve URLs by in-degree: {}", error.getMessage());
             session.closeAsync();
             return List.of();
-        }).toCompletableFuture();
-    }
-
-    public CompletableFuture<Void> printDatabaseContents() {
-        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
-
-        return session.executeReadAsync(tx ->
-                tx.runAsync(
-                                "MATCH (u:url)-[r:contains]->(u2:url) " +
-                                        "RETURN u.address as source, u2.address as target"
-                        )
-                        .thenCompose(cursor ->
-                                cursor.listAsync(record -> {
-                                            System.out.println("Relationship: " +
-                                                    record.get("source").asString() + " -> " +
-                                                    record.get("target").asString());
-                                            return true; // Return something for the mapping function
-                                        })
-                                        .thenApply(list -> null) // Convert the List<Boolean> to Void
-                        )
-        ).thenCompose(results ->
-                session.closeAsync()
-        ).exceptionally(error -> {
-            logger.error("Failed to print database contents: " + error.getMessage());
-            session.closeAsync();
-            return null;
-        }).toCompletableFuture();
-
-
-    }
-
-    public CompletableFuture<Void> printDatabaseCounts() {
-        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
-
-        return session.executeReadAsync(tx ->
-                tx.runAsync(
-                                "MATCH (u:url) " +
-                                        "WITH count(u) as nodeCount " +
-                                        "MATCH ()-[r:contains]->() " +
-                                        "RETURN nodeCount, count(r) as relCount"
-                        )
-                        .thenCompose(cursor ->
-                                cursor.singleAsync()
-                                        .thenAccept(record -> {
-                                            System.out.println("Total nodes: " + record.get("nodeCount").asInt());
-                                            System.out.println("Total relationships: " + record.get("relCount").asInt());
-                                        })
-                        )
-        ).thenCompose(results ->
-                session.closeAsync()
-        ).exceptionally(error -> {
-            logger.error("Failed to print database counts: " + error.getMessage());
-            session.closeAsync();
-            return null;
         }).toCompletableFuture();
     }
 

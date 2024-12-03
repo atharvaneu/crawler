@@ -336,7 +336,7 @@ public class Crawler {
     public void displayURLsByRank() {
         db.getURLsByInDegree()
                 .thenAccept(rankings -> {
-                    System.out.println("\nURL Rankings by In-Degree:");
+                    System.out.println("\n(ASYNC) URL Rankings by In-Degree:");
                     rankings.forEach(System.out::println);
                 })
                 .join();

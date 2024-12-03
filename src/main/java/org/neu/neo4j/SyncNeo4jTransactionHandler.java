@@ -6,6 +6,7 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neu.Crawler;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +17,7 @@ public class SyncNeo4jTransactionHandler {
         hostname = configReader.getHostname();
         username = configReader.getUsername();
         password = configReader.getPassword();
-        System.out.println("Environment (dev)\n"+"hostname : "+hostname+"\nusername : "+username+"\npassword : "+password);
+        System.out.println("(SYNC) Environment (dev)\n"+"hostname : "+hostname+"\nusername : "+username+"\npassword : "+password);
     }
 
     /**
@@ -26,16 +27,16 @@ public class SyncNeo4jTransactionHandler {
         this.driver = GraphDatabase.driver(hostname, AuthTokens.basic(username, password));
         try {
             this.driver.verifyConnectivity();
-            System.out.println("Connection established");
+            System.out.println("(SYNC) Connection established");
         } catch (Exception e) {
-            System.out.println("Failed to connect to the database: " + e.getMessage());
+            System.out.println("(SYNC) Failed to connect to the database: " + e.getMessage());
         }
         try {
             this.session = this.driver.session(SessionConfig.builder().withDatabase("neo4j").build());
             createConstraints();
         }
         catch(Exception e){
-            System.out.println("Failed to initiate session: " + e.getMessage());
+            System.out.println("(SYNC) Failed to initiate session: " + e.getMessage());
             this.close();
         }
     }
@@ -61,7 +62,7 @@ public class SyncNeo4jTransactionHandler {
             this.session.run("CREATE CONSTRAINT IF NOT EXISTS FOR (u:url) REQUIRE u.address IS UNIQUE");
         }
         catch(Exception e){
-            System.out.println("Failed to create constraints: " + e.getMessage());
+            System.out.println("(SYNC) Failed to create constraints: " + e.getMessage());
         }
 
     }
@@ -86,7 +87,7 @@ public class SyncNeo4jTransactionHandler {
             });
         }
         catch(Exception e){
-            System.out.println("Failed to insert node: " + e.getMessage());
+            System.out.println("(SYNC) Failed to insert node: " + e.getMessage());
         }
     }
 
@@ -132,8 +133,38 @@ public class SyncNeo4jTransactionHandler {
                 return 0L;
             });
         } catch (Exception e) {
-            System.out.println("Failed to retrieve node count: " + e.getMessage());
+            System.out.println("(SYNC) Failed to retrieve node count: " + e.getMessage());
             return 0L;
+        }
+    }
+
+    /**
+     * Get URLs sorted by their reference rankings
+     * @return
+     */
+    public List<URLRank> getURLsByInDegree() {
+        try (Session session = driver.session(SessionConfig.forDatabase("neo4j"))) {
+            return session.executeRead(tx -> {
+                Result result = tx.run(
+                        "MATCH (u:url) " +
+                                "WITH u, COUNT { ()-[:contains]->(u) } as inDegree " +
+                                "RETURN u.address as url, inDegree " +
+                                "ORDER BY inDegree DESC"
+                );
+
+                List<URLRank> rankings = new ArrayList<>();
+                while (result.hasNext()) {
+                    Record record = result.next();
+                    rankings.add(new URLRank(
+                            record.get("url").asString(),
+                            record.get("inDegree").asInt()
+                    ));
+                }
+                return rankings;
+            });
+        } catch (Exception e) {
+            logger.error("Failed to retrieve URLs by in-degree: {}", e.getMessage());
+            return List.of();
         }
     }
 

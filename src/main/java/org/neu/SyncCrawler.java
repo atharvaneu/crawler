@@ -1,6 +1,7 @@
 package org.neu;
 
 import org.neu.neo4j.SyncNeo4jTransactionHandler;
+import org.neu.neo4j.URLRank;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -138,6 +139,17 @@ public class SyncCrawler {
         }
 
         return hyperlinks;
+    }
+
+    /**
+     * Display URLs from the database sorted by order of their in-degrees
+     */
+    public void displayURLsByRank() {
+        List<URLRank> urls = db.getURLsByInDegree();
+
+        System.out.println("\n(SYNC) URL Rankings by In-Degree:");
+        urls.forEach(System.out::println);
+
     }
 
     /**

@@ -40,12 +40,20 @@ public class BenchmarkSyncCrawler implements Benchmarker {
         SyncCrawler webcrawler = SyncCrawler.getInstance();
 
         long ms = runtimeConfig.syncTime;
+
+        System.out.println("\n======================================(SYNC) CRAWLER INIT===========================================\n");
+
         webcrawler.init();
 
         webcrawler.run(page, ms);
         System.out.println("(SYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
 
+        if (runtimeConfig.isVerbose) {
+            webcrawler.displayURLsByRank();
+        }
+
         webcrawler.close();
+        System.out.println("\n======================================(SYNC) CRAWLER CLOSED===========================================\n");
     }
 
     private static final Logger logger = LogManager.getLogger(BenchmarkSyncCrawler.class);
