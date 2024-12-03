@@ -47,25 +47,39 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
             try {
                 webcrawler.init();
                 webcrawler.run("https://www.wikipedia.org/");
+
             } catch (Exception e) {
                 System.out.println("Crawler interrupted or finished execution: " + e.getMessage());
             }
-            webcrawler.close();
+            finally {
+            }
         });
 
         crawlerThread.start();
 
-        crawlerThread.join(ms);
+//        crawlerThread.join(ms);
 //        // Main thread sleeps for the configured duration
-//        try {
-//            Thread.sleep(ms);
-//        } catch (InterruptedException e) {
-//            System.out.println("Main thread interrupted: " + e.getMessage());
-//        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            System.out.println("Main thread interrupted: " + e.getMessage());
+        }
 //
 //        // Interrupt the crawler thread and close the crawler
 //        crawlerThread.interrupt();
-        System.out.println("(ASYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
+        System.out.println("\n(ASYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.\n");
+
+        webcrawler.displayURLsByRank();
+
+        // UNCOMMENT BELOW LINES FOR DATABASE STATISTICS DEBUGGING
+//        System.out.println("\nDatabase Statistics:");
+//        webcrawler.getDb().printDatabaseCounts().join();
+//
+//        System.out.println("\nDetailed Relationships:");
+//        webcrawler.getDb().printDatabaseContents().join();
+
+        System.out.println("CLOSING YEYEYEYEYE");
+        webcrawler.close();
 
         System.exit(1);
     }
