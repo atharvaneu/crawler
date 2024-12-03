@@ -29,7 +29,7 @@ public class BenchmarkSyncCrawler implements Benchmarker {
      * @throws InterruptedException If the benchmark is interrupted during its operation.
      */
     @Override
-    public void benchmark(String[] pages) throws MalformedURLException, IOException, InterruptedException {
+    public void benchmark(String page) throws MalformedURLException, IOException, InterruptedException {
 
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
@@ -42,10 +42,8 @@ public class BenchmarkSyncCrawler implements Benchmarker {
         long ms = runtimeConfig.syncTime;
         webcrawler.init();
 
-        for (String _page : pages) {
-            webcrawler.run(_page, ms);
-            System.out.println("(SYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
-        }
+        webcrawler.run(page, ms);
+        System.out.println("(SYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.");
 
         webcrawler.close();
     }

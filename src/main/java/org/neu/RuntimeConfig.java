@@ -17,6 +17,7 @@ public class RuntimeConfig {
                 ", asyncTime=" + asyncTime +
                 ", syncMode=" + syncMode +
                 ", syncTime=" + syncTime +
+                ", verbose=" + isVerbose +
                 '}';
     }
 
@@ -25,6 +26,8 @@ public class RuntimeConfig {
 
     public boolean syncMode = false;
     public long syncTime = -1;
+
+    public boolean isVerbose = false;
 
     private static RuntimeConfig instance;
 }

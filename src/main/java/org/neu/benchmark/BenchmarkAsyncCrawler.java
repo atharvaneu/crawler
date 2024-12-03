@@ -26,27 +26,23 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
      * @throws InterruptedException If the main thread is interrupted during sleep.
      */
     @Override
-    public void benchmark(String[] pages) throws MalformedURLException, IOException, InterruptedException {
+    public void benchmark(String page) throws MalformedURLException, IOException, InterruptedException {
 
-        // Retrieve runtime configuration instance
         RuntimeConfig runtimeConfig = RuntimeConfig.getInstance();
 
-        // Exit if asynchronous mode is not enabled
         if (!runtimeConfig.asyncMode) {
             return;
         }
 
-        // Get the configured duration for the benchmark
         long ms = runtimeConfig.asyncTime;
 
-        // Initialize the crawler
-
         Crawler webcrawler = Crawler.getInstance();
+
         // Create and start the crawler thread
         Thread crawlerThread = new Thread(() -> {
             try {
                 webcrawler.init();
-                webcrawler.run("https://www.wikipedia.org/");
+                webcrawler.run(page);
 
             } catch (Exception e) {
                 System.out.println("Crawler interrupted or finished execution: " + e.getMessage());
@@ -57,19 +53,18 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
 
         crawlerThread.start();
 
-//        crawlerThread.join(ms);
-//        // Main thread sleeps for the configured duration
+       // Main thread sleeps for the configured duration
         try {
             Thread.sleep(ms);
         } catch (InterruptedException e) {
             System.out.println("Main thread interrupted: " + e.getMessage());
         }
-//
-//        // Interrupt the crawler thread and close the crawler
-//        crawlerThread.interrupt();
+
         System.out.println("\n(ASYNC) Benchmark for " + ms + "ms -> " + webcrawler.getAllNodes() + " URLs crawled.\n");
 
-        webcrawler.displayURLsByRank();
+        if (runtimeConfig.isVerbose) {
+            webcrawler.displayURLsByRank();
+        }
 
         // UNCOMMENT BELOW LINES FOR DATABASE STATISTICS DEBUGGING
 //        System.out.println("\nDatabase Statistics:");
@@ -78,7 +73,6 @@ public class BenchmarkAsyncCrawler implements Benchmarker {
 //        System.out.println("\nDetailed Relationships:");
 //        webcrawler.getDb().printDatabaseContents().join();
 
-        System.out.println("CLOSING YEYEYEYEYE");
         webcrawler.close();
 
         System.exit(1);
