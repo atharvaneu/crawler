@@ -41,7 +41,8 @@ public class BenchmarkSyncCrawler implements Benchmarker {
 
         long ms = runtimeConfig.syncTime;
 
-        System.out.println("\n======================================(SYNC) CRAWLER INIT===========================================\n");
+        System.out.println("\n======================================(SYNC) CRAWLER INIT===========================================");
+        System.out.println("======================================(SYNC) URL: " + runtimeConfig.rootUrl + "===========================================\n");
 
         webcrawler.init();
 

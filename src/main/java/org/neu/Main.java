@@ -26,13 +26,13 @@ public class Main {
         if (runtimeConfig.syncMode) {
             Benchmarker syncBenchmarker = new BenchmarkSyncCrawler();
 
-            syncBenchmarker.benchmark(startingPage);
+            syncBenchmarker.benchmark(runtimeConfig.rootUrl);
         }
 
         if (runtimeConfig.asyncMode) {
             Benchmarker asyncBenchmarker = new BenchmarkAsyncCrawler();
 
-            asyncBenchmarker.benchmark(startingPage);
+            asyncBenchmarker.benchmark(runtimeConfig.rootUrl);
         }
 
     }
@@ -44,7 +44,7 @@ public class Main {
      * @throws RuntimeException
      * @throws NumberFormatException
      */
-    public static void handleArgs(String[] args) throws RuntimeException, NumberFormatException {
+    public static void handleArgs(String[] args) throws RuntimeException, NumberFormatException, MalformedURLException {
         if (args.length == 0) {
             logger.fatal("\nPlease provide method of running, and time for benchmarks.\nSee --help for more usage.");
             throw new RuntimeException("InvalidArgumentException");
@@ -84,6 +84,16 @@ public class Main {
                     runtimeConfig.syncMode = true;
                     runtimeConfig.syncTime = Long.parseLong(value);
                 }
+                else if (key.equals("root_url")) {
+                    try {
+                        new URL(value);
+                        runtimeConfig.rootUrl = value;
+                    }
+                    catch (MalformedURLException e) {
+                        logger.fatal("--root_url={} is not a valid URL. A valid URL must follow the RFC2396 URI protocol.", value);
+                        System.exit(1);
+                    }
+                }
                 else {
                     logger.fatal("Invalid argument key: {} in argument --{}", key, arg);
                     throw new RuntimeException("InvalidArgumentException");
@@ -95,5 +105,4 @@ public class Main {
     }
 
     private static final Logger logger = LogManager.getLogger(Main.class);
-    private static String startingPage = "https://www.wikipedia.org/";
 }

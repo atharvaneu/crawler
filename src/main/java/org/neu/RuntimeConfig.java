@@ -29,5 +29,7 @@ public class RuntimeConfig {
 
     public boolean isVerbose = false;
 
+    public String rootUrl = "https://www.wikipedia.org/";
+
     private static RuntimeConfig instance;
 }
