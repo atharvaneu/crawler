@@ -98,7 +98,7 @@ public class Crawler {
 
         while (!queue.isEmpty() && !shouldStop) {
             if ((System.currentTimeMillis() - startTime) > timeoutMillis) {
-                logger.info("Time limit of {}ms reached. Stopping the BFS traversal.");
+                logger.info("Time limit of {}ms reached. Stopping the BFS traversal.", timeoutMillis);
                 shouldStop = true;
                 break;
             }
@@ -132,13 +132,18 @@ public class Crawler {
                                     break;
                                 }
 
-                                logger.info("Current link being processed: " + childLink);
+                                logger.info("Current link being processed: {}", childLink);
 
                                 CompletableFuture<Void> childFuture;
+
+                                // Add to queue and childToParent only if not visited
                                 if (visited.add(childLink)) {
                                     queue.add(childLink);
                                     childToParent.put(childLink, currentUrl);
+                                }
 
+                                // Always try to create the relationship unless it would create a cycle
+                                if (!wouldCreateCycle(currentUrl, childLink)) {
                                     childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
                                             .toCompletableFuture()
                                             .thenAccept(v -> {
@@ -146,20 +151,8 @@ public class Crawler {
                                                     throw new CancellationException("Crawler stopped");
                                                 }
                                             });
-
                                 } else {
-                                    String existingParent = childToParent.get(childLink);
-                                    if (existingParent != null && !existingParent.equals(currentUrl) && !wouldCreateCycle(currentUrl, childLink)) {
-                                        childFuture = db.mergeNodeWithChildURL(currentUrl, childLink)
-                                                .toCompletableFuture()
-                                                .thenAccept(v -> {
-                                                    if (shouldStop) {
-                                                        throw new CancellationException("Crawler stopped");
-                                                    }
-                                                });
-                                    } else {
-                                        childFuture = CompletableFuture.completedFuture(null);
-                                    }
+                                    childFuture = CompletableFuture.completedFuture(null);
                                 }
 
                                 childFutures.add(childFuture.exceptionally(ex -> null));
@@ -167,7 +160,6 @@ public class Crawler {
 
                             return CompletableFuture.allOf(childFutures.toArray(new CompletableFuture[0]));
                         });
-
                 levelFutures.add(urlProcessingFuture.exceptionally(ex -> null));
             }
 
@@ -291,7 +283,17 @@ public class Crawler {
         return this.db.getAllNodes().join();
     }
 
-
+    /**
+     * Display URLs from the database sorted by order of their in-degrees
+     */
+    public void displayURLsByRank() {
+        db.getURLsByInDegree()
+                .thenAccept(rankings -> {
+                    System.out.println("\nURL Rankings by In-Degree:");
+                    rankings.forEach(System.out::println);
+                })
+                .join();
+    }
 
     public void forceStopAllOperations() {
         shouldStop = true;
@@ -329,6 +331,10 @@ public class Crawler {
 
     public boolean getShouldStop() {
         return shouldStop;
+    }
+
+    public Neo4jTransactionHandler getDb() {
+        return db;
     }
 
     private static Crawler instance;

@@ -10,6 +10,7 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.async.*;
 import org.neo4j.driver.async.AsyncSession;
+import org.neu.Crawler;
 
 /**
  * Provides utility methods for interacting with a Neo4j database, including creating constraints,
@@ -97,12 +98,11 @@ public class Neo4jTransactionHandler {
                 tx.runAsync("MERGE (u:url {address: $url}) " +
                                         "WITH u " +
                                         "MERGE (u_child:url {address: $dependent_url}) " +
-                                        "WITH u " +
+                                        "WITH u, u_child " +  // Keep both nodes in context
                                         "MERGE (u)-[r:contains]->(u_child) " +
-                                        "RETURN u.address",
+                                        "RETURN u.address, u_child.address",  // Return both for verification
                                 Values.parameters("url", url, "dependent_url", dependent_url))
-                        .thenCompose(ResultCursor::consumeAsync)
-        ).thenCompose(resultSummary -> {
+                        .thenCompose(ResultCursor::consumeAsync)        ).thenCompose(resultSummary -> {
             return session.closeAsync();
         }).exceptionally(error -> {
             System.out.println("Failed to insert node due to: " + error.getMessage());
@@ -140,17 +140,96 @@ public class Neo4jTransactionHandler {
      * @return long Total number of nodes (URLs) in the database.
      */
     public CompletableFuture<Long> getAllNodes() {
-        AsyncSession session = driver.asyncSession(SessionConfig.forDatabase("neo4j"));
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
         return session.executeReadAsync(tx ->
                 tx.runAsync("MATCH (n) RETURN count(n) AS count")
-                        .thenCompose(cursor -> cursor.singleAsync())
+                        .thenCompose(ResultCursor::singleAsync)
                         .thenApply(record -> record.get("count").asLong())
         ).thenCompose(count -> {
             return session.closeAsync().thenApply(ignored -> count);
         }).exceptionally(error -> {
-            logger.error("Failed to retrieve node count: " + error.getMessage());
+            logger.error("Failed to retrieve node count: {}", error.getMessage());
             session.closeAsync();
             return 0L;
+        }).toCompletableFuture();
+    }
+
+    public CompletableFuture<List<URLRank>> getURLsByInDegree() {
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
+
+        return session.executeReadAsync(tx ->
+                tx.runAsync(
+                                "MATCH (u:url) " +
+                                        "WITH u, COUNT { (u)<-[:contains]-() } as inDegree " +
+                                        "RETURN u.address as url, inDegree " +
+                                        "ORDER BY inDegree DESC"
+                        )
+                        .thenCompose(cursor ->
+                                cursor.listAsync(record -> new URLRank(
+                                        record.get("url").asString(),
+                                        record.get("inDegree").asInt()
+                                ))
+                        )
+        ).thenCompose(results -> {
+            return session.closeAsync().thenApply(ignored -> results);
+        }).exceptionally(error -> {
+            logger.error("Failed to retrieve URLs by in-degree: {}", error.getMessage());
+            session.closeAsync();
+            return List.of();
+        }).toCompletableFuture();
+    }
+
+    public CompletableFuture<Void> printDatabaseContents() {
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
+
+        return session.executeReadAsync(tx ->
+                tx.runAsync(
+                                "MATCH (u:url)-[r:contains]->(u2:url) " +
+                                        "RETURN u.address as source, u2.address as target"
+                        )
+                        .thenCompose(cursor ->
+                                cursor.listAsync(record -> {
+                                            System.out.println("Relationship: " +
+                                                    record.get("source").asString() + " -> " +
+                                                    record.get("target").asString());
+                                            return true; // Return something for the mapping function
+                                        })
+                                        .thenApply(list -> null) // Convert the List<Boolean> to Void
+                        )
+        ).thenCompose(results ->
+                session.closeAsync()
+        ).exceptionally(error -> {
+            logger.error("Failed to print database contents: " + error.getMessage());
+            session.closeAsync();
+            return null;
+        }).toCompletableFuture();
+
+
+    }
+
+    public CompletableFuture<Void> printDatabaseCounts() {
+        AsyncSession session = driver.session(AsyncSession.class, SessionConfig.forDatabase("neo4j"));
+
+        return session.executeReadAsync(tx ->
+                tx.runAsync(
+                                "MATCH (u:url) " +
+                                        "WITH count(u) as nodeCount " +
+                                        "MATCH ()-[r:contains]->() " +
+                                        "RETURN nodeCount, count(r) as relCount"
+                        )
+                        .thenCompose(cursor ->
+                                cursor.singleAsync()
+                                        .thenAccept(record -> {
+                                            System.out.println("Total nodes: " + record.get("nodeCount").asInt());
+                                            System.out.println("Total relationships: " + record.get("relCount").asInt());
+                                        })
+                        )
+        ).thenCompose(results ->
+                session.closeAsync()
+        ).exceptionally(error -> {
+            logger.error("Failed to print database counts: " + error.getMessage());
+            session.closeAsync();
+            return null;
         }).toCompletableFuture();
     }
 
